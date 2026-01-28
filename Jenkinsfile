@@ -3,47 +3,38 @@ pipeline {
 
     environment {
         IMAGE_NAME = "rakshak45/secure-cicd-demo"
-        IMAGE_TAG  = "latest"
     }
 
     stages {
 
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
-                sh '''
-                docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                '''
+                sh """
+                  docker build -t ${IMAGE_NAME}:latest .
+                """
             }
         }
 
         stage('Security Scan (Trivy)') {
             steps {
-                sh '''
-                trivy image --exit-code 1 --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG
-                '''
+                sh """
+                  trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}:latest
+                """
             }
         }
 
-        stage('Push Image') {
+        stage('Run Container (Test)') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    docker push $IMAGE_NAME:$IMAGE_TAG
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                kubectl apply -f k8s-deployment.yaml
-                '''
+                sh """
+                  docker rm -f secure-test || true
+                  docker run -d -p 5000:5000 --name secure-test ${IMAGE_NAME}:latest
+                """
             }
         }
     }
@@ -57,3 +48,4 @@ pipeline {
         }
     }
 }
+
