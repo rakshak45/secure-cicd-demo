@@ -1,14 +1,7 @@
 stage('Push Image') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'dockerhub-creds',
-            usernameVariable: 'DOCKER_USER',
-            passwordVariable: 'DOCKER_PASS'
-        )]) {
-            sh '''
-              echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-              docker push ${IMAGE_NAME}:latest
-            '''
-        }
-    }
+    sh '''
+      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      docker tag secure-cicd-demo:1.0 rakshak45/secure-cicd-demo:latest
+      docker push rakshak45/secure-cicd-demo:latest
+    '''
 }
