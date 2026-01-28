@@ -1,22 +1,15 @@
-node {
-
-    stage('Checkout') {
-        checkout scm
+stage('Push Image') {
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-creds',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS'
+        )]) {
+            sh '''
+              docker tag secure-cicd-demo:1.0 rakshak45/secure-cicd-demo:latest
+              echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+              docker push rakshak45/secure-cicd-demo:latest
+            '''
+        }
     }
-
-    stage('Build Image') {
-        sh '''
-          docker build -t secure-cicd-demo:1.0 .
-        '''
-    }
-
-    stage('Push Image') {
-        sh '''
-          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          docker tag secure-cicd-demo:1.0 rakshak45/secure-cicd-demo:latest
-          docker push rakshak45/secure-cicd-demo:latest
-        '''
-    }
-
 }
-
