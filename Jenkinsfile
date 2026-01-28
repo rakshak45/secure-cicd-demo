@@ -3,38 +3,37 @@ pipeline {
 
     environment {
         IMAGE_NAME = "rakshak45/secure-cicd-demo"
+        IMAGE_TAG  = "latest"
     }
 
     stages {
 
-        stage('Checkout Code') {
-            steps {
-                checkout scm
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t :latest .'
+                sh '''
+                docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                '''
             }
         }
 
         stage('Security Scan (Trivy)') {
             steps {
-                sh 'trivy image --exit-code 1 --severity HIGH,CRITICAL :latest'
+                sh '''
+                trivy image --exit-code 1 --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG
+                '''
             }
         }
 
         stage('Push Image') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: "dockerhub-creds",
-                    usernameVariable: "DOCKER_USER",
-                    passwordVariable: "DOCKER_PASS"
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                    echo  | docker login -u  --password-stdin
-                    docker push :latest
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push $IMAGE_NAME:$IMAGE_TAG
                     '''
                 }
             }
@@ -42,8 +41,19 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f k8s-deployment.yaml'
+                sh '''
+                kubectl apply -f k8s-deployment.yaml
+                '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully"
+        }
+        failure {
+            echo "Pipeline failed"
         }
     }
 }
