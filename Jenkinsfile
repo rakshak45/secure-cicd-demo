@@ -14,27 +14,28 @@ pipeline {
             }
         }
 
-        stage('Build Image') {
+        stage('Build Docker Image') {
             steps {
-                sh 'docker build -t secure-cicd-demo:1.0 .'
+                sh '''
+                  docker build -t secure-cicd-demo:1.0 .
+                '''
             }
         }
 
         stage('Security Scan (Trivy)') {
             steps {
                 sh '''
-                docker run --rm \
-                  -v /var/run/docker.sock:/var/run/docker.sock \
-                  aquasec/trivy:latest image \
-                  --exit-code 0 \
-                  --severity HIGH,CRITICAL \
-                  --skip-db-update \
-                  secure-cicd-demo:1.0 || true
+                  docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image \
+                    --exit-code 0 \
+                    --severity HIGH,CRITICAL \
+                    secure-cicd-demo:1.0 || true
                 '''
             }
         }
 
-        stage('Push Image') {
+        stage('Push Image to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-token',
@@ -53,7 +54,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline finished'
+            echo "Pipeline finished"
         }
     }
 }
